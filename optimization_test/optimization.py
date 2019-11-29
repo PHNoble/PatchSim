@@ -137,6 +137,7 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
 
     T = params['T']
     budget = vax_supply_to_array(B,T)
+    print(budget)
     state_ids = sorted(list(set([id[0:2] for id in patch_ids.values])))
     #state_ids.remove('02') # Alaska
     #state_ids.remove('15') # Hawaii
@@ -144,20 +145,26 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
     u=1
     vaxs = {}
     configs = {"StartDate": 0, "NetworkType": "Weekly"}
+    State_Array = None
     for day in range(1,T,temporal_granularity):
         Q = check_avail(budget,day,L)
+        print("Day {}, Q {}".format(day, Q))
         ##Evaluating episize only until day+look_ahead duration
         if look_ahead!=-1:
             params['T'] = min(day+look_ahead,T)
         configs["StartDate"] = day
+        state_arrs = [None] * n_states
+        opt_j = 0
         while Q>0:
+            print("    Budget Left {}".format(Q))
             jobs = []
             results = []
             logger.debug('Starting Greedy round {} on day {} looking ahead to day {}'.format(u,day,params['T']))
             logger.debug('{} units of vax available on day {}. Assigning...'.format(Q,day))
+
             for j in range(n_states):
                 state = state_ids[j]
-
+                print("\t State {}".format(state))
                 ##Checking population limits
                 if check_popcaps(vaxs,state,patch,Q):
                     x = assign_to_state_proportional(vaxs,state,patch,Q,day)
@@ -165,7 +172,7 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
                     #job.id = (j,state)
                     # jobs.append(job)
 
-                    episize = sim.run_disease_simulation(cfg, patch_df=patch, params=params, seeds=seeds, vaxs=x)
+                    episize, state_arrs[j] = sim.run_disease_simulation(cfg, patch_df=patch, params=params, seeds=seeds, vaxs=x, input_state=State_Array)
                     results.append((j, state, episize))
                 else:
                     logger.debug('Skipping state {} due to population limit'.format(state))
@@ -178,11 +185,13 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
 
             opt = sorted(results, key=lambda x: x[2])[0]
             opt_j,opt_state,opt_episize = opt
+
             logger.info('Round {} Best allocation: Vax {} to state FIPS {} on day {} with episize {}'.format(u,Q,opt_state,day,opt_episize))
             vaxs = assign_to_state_proportional(vaxs,state_ids[opt_j],patch,Q,day)
             consume(budget,day,Q)
             Q = check_avail(budget,day,L)
         u+=1
+        State_Array = state_arrs[opt_j]
         logger.debug('Vax supply for day {} emptied. Continuing...'.format(day))
     logger.debug('All vaccines allocated!')
 
