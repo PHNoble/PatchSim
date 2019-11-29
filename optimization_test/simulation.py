@@ -260,26 +260,25 @@ def write_epicurves(configs,patch_df,State_Array):
         f.write('{} {}\n'.format(patch_df.id.values[i], epicurve))
     f.close()
 
-def run_disease_simulation(configs,patch_df=None,params=None,Theta=None,seeds=None,vaxs=None,return_epi=False,write_epi=False):
-    try:
-        handler = logging.FileHandler(configs['LogFile'], mode='w')
-        for hdlr in logger.handlers[:]:  # remove the existing file handlers
-            if isinstance(hdlr,logger.FileHander):
-                logger.removeHandler(hdlr)
+def run_disease_simulation(configs,patch_df=None,params=None,Theta=None,seeds=None,vaxs=None,return_epi=False,write_epi=False, input_state=None):
+    # try:
+    #     handler = logging.FileHandler(configs['LogFile'], mode='w')
+    #     for hdlr in logger.handlers[:]:  # remove the existing file handlers
+    #         if isinstance(hdlr,logger.FileHander):
+    #             logger.removeHandler(hdlr)
+    #
+    #     logger.addHandler(handler)
+    #     logger.setLevel(logging.INFO)
+    #     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    #     handler.setFormatter(formatter)
+    # except:
+    #     noop = logging.NullHandler()
+    #     logger.addHandler(noop)
 
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-    except:
-        noop = logging.NullHandler()
-        logger.addHandler(noop)
-
-    logger.info('Starting PatchSim')
+    # logger.info('Starting PatchSim')
     start = time.time()
 
     if patch_df is None:
-        print("kjaskjdkj")
         patch_df = load_patch(configs)
 
     if params is None:
@@ -294,15 +293,15 @@ def run_disease_simulation(configs,patch_df=None,params=None,Theta=None,seeds=No
     if vaxs is None:
         vaxs = load_vax(configs,params,patch_df)
 
-    logger.info('Initializing simulation run...')
+    # logger.info('Initializing simulation run...')
 
     if 'RandomSeed' in configs.keys():
         np.random.seed(int(configs['RandomSeed']))
         stoch = True
-        logger.info('Found RandomSeed. Running in stochastic mode...')
+        # logger.info('Found RandomSeed. Running in stochastic mode...')
     else:
         stoch = False
-        logger.info('No RandomSeed found. Running in deterministic mode...')
+        # logger.info('No RandomSeed found. Running in deterministic mode...')
 
     dim = 5 ##Number of states (SEIRV)
     if stoch:
@@ -311,6 +310,8 @@ def run_disease_simulation(configs,patch_df=None,params=None,Theta=None,seeds=No
         State_Array = np.ndarray((dim,params['T']+1,len(patch_df)))
 
     State_Array.fill(0)
+    if input_state != None:
+        State_Array = input_state
     S,E,I,R,V = State_Array ## Aliases for the State Array
 
     if configs['LoadState'] =='True' and int(configs['StartDate']) > 1:
@@ -335,15 +336,15 @@ def run_disease_simulation(configs,patch_df=None,params=None,Theta=None,seeds=No
             patchsim_step(State_Array,patch_df,params,Theta[curr_month-1],seeds,vaxs,t,stoch)
 
     if configs['SaveState'] == 'True':
-        logger.info('Saving StateArray to File')
+        # logger.info('Saving StateArray to File')
         np.save(configs['SaveFile'],State_Array[:,-1,:])
 
     elapsed = time.time() - start
-    logger.info('Simulation complete. Time elapsed: {} seconds.'.format(elapsed))
-    logger.removeHandler(handler)
+    # logger.info('Simulation complete. Time elapsed: {} seconds.'.format(elapsed))
+    # logger.removeHandler(handler)
 
     if (write_epi==False)&(return_epi==False):
-        return int(sum(R[-1,:]))
+        return (int(sum(R[-1,:])), State_Array)
     else:
         if (write_epi==True):
             write_epicurves(configs,patch_df,State_Array)
