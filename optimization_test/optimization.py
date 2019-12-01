@@ -164,7 +164,6 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
 
             for j in range(n_states):
                 state = state_ids[j]
-                print("\t State {}".format(state))
                 ##Checking population limits
                 if check_popcaps(vaxs,state,patch,Q):
                     x = assign_to_state_proportional(vaxs,state,patch,Q,day)
