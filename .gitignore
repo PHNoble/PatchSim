@@ -5,3 +5,4 @@ __pycache__
 .DS_Store
 .ipynb_checkpoints/
 setup_files/
+US_vax_coverage_2014-15_weekly_start210.csv

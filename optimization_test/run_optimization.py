@@ -27,6 +27,8 @@ def parse_args():
     ap.add_argument('-l', '--log', default=None,
                     help='log file, if not specified logs are written to'
                     ' standard output')
+    ap.add_argument('-t', '--threat_model', default=False,
+                    help='run the threat model optimization instead')
 
     return ap.parse_args()
 
@@ -51,12 +53,15 @@ def main():
 
     cfg = sim.read_config(args.config)
     supply = opt.load_vax_supply(args.supply)
-    step_size = int(args.step_size)
-    look_ahead = int(args.look_ahead)
-    temporal_search_size = int(args.temporal_search_size)
-    f_out = open(args.output,'w')
-    opt.greedy(cfg,supply,step_size,temporal_search_size,look_ahead,f_out)
-    f_out.close()
+    if(args.threat_model is True):
+        pass
+    else:
+        step_size = int(args.step_size)
+        look_ahead = int(args.look_ahead)
+        temporal_search_size = int(args.temporal_search_size)
+        f_out = open(args.output,'w')
+        opt.greedy(cfg,supply,step_size,temporal_search_size,look_ahead,f_out)
+        f_out.close()
 
 
 if __name__ == '__main__':

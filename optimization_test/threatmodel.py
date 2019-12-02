@@ -11,9 +11,104 @@ import time
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+def epicurves_todf(configs,patch_df,State_Array):
+    S,E,I,R,V = State_Array ## Aliases for the State Array
 
-def threat_val():
-    pass
+    try:
+        scaling = float(configs['ScalingFactor'])
+    except:
+        scaling = 1
+
+    rounding_bool = True
+    try:
+        if configs['OutputFormat'] == 'Whole':
+            rounding_bool = True
+        if configs['OutputFormat'] == 'Fractional':
+            rounding_bool = False
+    except:
+        pass
+
+    out_df = pd.DataFrame(columns = range(int(configs['Duration']) + 1))
+
+    for i in range(len(patch_df)):
+        net_sus = S[:,i]+V[:,i]
+        if configs['LoadState']=='False':
+            net_sus = np.lib.pad(net_sus,(1,0),'constant',constant_values=(patch_df.pops.values[i],))
+        new_exposed = np.abs(np.diff(net_sus))
+
+
+        epicurve = [int(x*scaling) if rounding_bool else (x*scaling) for x in new_exposed]
+        out_df.loc[patch_df.id.values[i]] = epicurve
+
+    return out_df
+
+
+def write_epicurves(configs,patch_df,State_Array):
+    S,E,I,R,V = State_Array ## Aliases for the State Array
+    f = open(configs['OutputFile'],'w')
+
+    try:
+        scaling = float(configs['ScalingFactor'])
+    except:
+        scaling = 1
+
+    rounding_bool = True
+    try:
+        if configs['OutputFormat'] == 'Whole':
+            rounding_bool = True
+        if configs['OutputFormat'] == 'Fractional':
+            rounding_bool = False
+    except:
+        pass
+
+    for i in range(len(patch_df)):
+        net_sus = S[:,i]+V[:,i]
+        if configs['LoadState']=='False':
+            net_sus = np.lib.pad(net_sus,(1,0),'constant',constant_values=(patch_df.pops.values[i],))
+        new_exposed = np.abs(np.diff(net_sus))
+
+        if rounding_bool:
+            epicurve = ' '.join([str(int(x*scaling)) for x in new_exposed])
+        else:
+            epicurve = ' '.join([str(x*scaling) for x in new_exposed])
+
+        f.write('{} {}\n'.format(patch_df.id.values[i], epicurve))
+    f.close()
+
+# Read vax supply schedule from file.
+# Each line of file should be:
+#  day,supply_quantity
+#
+def load_vax_supply(supply_schedule_file):
+    supply = {}
+    f = open(supply_schedule_file,'r')
+    for line in f:
+        day,amount = line.strip().split(',')
+        day,amount = int(day),int(amount)
+        if day not in supply.keys():
+            supply[day] = amount
+        else:
+            supply[day] += amount
+    f.close()
+    return supply
+
+
+def threat_val(State_Array, theta, patch_df):
+    #State array aliases
+    S, E, I, R, V = State_Array
+    patchlen = len(patch_df)
+    threat = np.ndarray(patchlen)
+    softmax = np.ndarray(patchlen)
+    for i in range(patchlen):
+        pop = S[i]+E[i]+I[i]+R[i]+V[i]
+        for j in range(patchlen):
+            if i == j:
+                continue
+            #j is source, i is destination
+            th = theta[j, i]
+            threat[i] = (E[j] + I[j])*th*(S[i]/pop)
+            softmax[i] = np.exp(threat[i])
+    softmaxsum = sum(softmax)
 
 def read_config(config_file):
     config_df = pd.read_csv(config_file,delimiter='=',names=['key','val'])
@@ -195,69 +290,6 @@ def patchsim_step(State_Array,patch_df,params,theta,seeds,vaxs,t,stoch):
         V[t+1] = V[t]
 
 
-def epicurves_todf(configs,patch_df,State_Array):
-    S,E,I,R,V = State_Array ## Aliases for the State Array
-
-    try:
-        scaling = float(configs['ScalingFactor'])
-    except:
-        scaling = 1
-
-    rounding_bool = True
-    try:
-        if configs['OutputFormat'] == 'Whole':
-            rounding_bool = True
-        if configs['OutputFormat'] == 'Fractional':
-            rounding_bool = False
-    except:
-        pass
-
-    out_df = pd.DataFrame(columns = range(int(configs['Duration']) + 1))
-
-    for i in range(len(patch_df)):
-        net_sus = S[:,i]+V[:,i]
-        if configs['LoadState']=='False':
-            net_sus = np.lib.pad(net_sus,(1,0),'constant',constant_values=(patch_df.pops.values[i],))
-        new_exposed = np.abs(np.diff(net_sus))
-
-
-        epicurve = [int(x*scaling) if rounding_bool else (x*scaling) for x in new_exposed]
-        out_df.loc[patch_df.id.values[i]] = epicurve
-
-    return out_df
-
-
-def write_epicurves(configs,patch_df,State_Array):
-    S,E,I,R,V = State_Array ## Aliases for the State Array
-    f = open(configs['OutputFile'],'w')
-
-    try:
-        scaling = float(configs['ScalingFactor'])
-    except:
-        scaling = 1
-
-    rounding_bool = True
-    try:
-        if configs['OutputFormat'] == 'Whole':
-            rounding_bool = True
-        if configs['OutputFormat'] == 'Fractional':
-            rounding_bool = False
-    except:
-        pass
-
-    for i in range(len(patch_df)):
-        net_sus = S[:,i]+V[:,i]
-        if configs['LoadState']=='False':
-            net_sus = np.lib.pad(net_sus,(1,0),'constant',constant_values=(patch_df.pops.values[i],))
-        new_exposed = np.abs(np.diff(net_sus))
-
-        if rounding_bool:
-            epicurve = ' '.join([str(int(x*scaling)) for x in new_exposed])
-        else:
-            epicurve = ' '.join([str(x*scaling) for x in new_exposed])
-
-        f.write('{} {}\n'.format(patch_df.id.values[i], epicurve))
-    f.close()
 
 def run_disease_simulation(configs,patch_df=None,params=None,Theta=None,seeds=None,vaxs=None,return_epi=False,write_epi=False):
     try:
