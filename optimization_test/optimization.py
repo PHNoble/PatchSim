@@ -138,7 +138,7 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
     theta = sim.load_Theta(cfg, params, patch)
     T = params['T']
     budget = vax_supply_to_array(B,T)
-    print(budget)
+
     state_ids = sorted(list(set([id[0:2] for id in patch_ids.values])))
     #state_ids.remove('02') # Alaska
     #state_ids.remove('15') # Hawaii
@@ -171,8 +171,8 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
                     # job = cluster.submit(cfg,patch,params,seeds,x)
                     #job.id = (j,state)
                     # jobs.append(job)
-
-                    episize, state_arrs[j] = sim.run_disease_simulation(cfg, patch_df=patch, params=params,Theta=theta, seeds=seeds, vaxs=x, input_state=State_Array)
+                    towrite =
+                    episize, state_arrs[j] = sim.run_disease_simulation(cfg, patch_df=patch, params=params,Theta=theta, seeds=seeds, vaxs=x, input_state=State_Array, write_epi=)
                     results.append((j, state, episize))
                 else:
                     logger.debug('Skipping state {} due to population limit'.format(state))
@@ -194,7 +194,9 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
         State_Array = state_arrs[opt_j]
         logger.debug('Vax supply for day {} emptied. Continuing...'.format(day))
     logger.debug('All vaccines allocated!')
+    sim.write_epicurves(cfg,patch,State_Array):
 
-    for t in sorted(vaxs.keys()):
-        for county in sorted(vaxs[t].keys()):
-            f_vax_schedule.write('%d %s %d\n' % (t,county,vaxs[t][county]))
+    for t in vaxs.keys():
+        for i in range(len(patch_ids.values)):
+            print('{} {} {}'.format(t,patch_ids.values[i],vaxs[t][i]))
+            f_vax_schedule.write('%d %s %d\n' % (t,patch_ids.values[i],vaxs[t][i]))
