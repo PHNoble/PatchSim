@@ -171,7 +171,6 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
                     # job = cluster.submit(cfg,patch,params,seeds,x)
                     #job.id = (j,state)
                     # jobs.append(job)
-                    towrite =
                     episize, state_arrs[j] = sim.run_disease_simulation(cfg, patch_df=patch, params=params,Theta=theta, seeds=seeds, vaxs=x, input_state=State_Array, write_epi=)
                     results.append((j, state, episize))
                 else:
