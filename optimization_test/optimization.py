@@ -129,12 +129,13 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
     #                            depends=[find_month,load_travel_network,
     #                                     patch_ODE_step])
     patch = sim.load_patch_attr(cfg)
+
     patch_ids = patch.id
     patch_pops = patch.pops
     patch_count = len(patch_ids.values)
     params = sim.load_disease_params(cfg, patch)
     seeds = sim.load_seed_schedule(cfg, params, patch)
-
+    theta = sim.load_Theta(cfg, params, patch)
     T = params['T']
     budget = vax_supply_to_array(B,T)
     print(budget)
@@ -171,7 +172,7 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
                     #job.id = (j,state)
                     # jobs.append(job)
 
-                    episize, state_arrs[j] = sim.run_disease_simulation(cfg, patch_df=patch, params=params, seeds=seeds, vaxs=x, input_state=State_Array)
+                    episize, state_arrs[j] = sim.run_disease_simulation(cfg, patch_df=patch, params=params,Theta=theta, seeds=seeds, vaxs=x, input_state=State_Array)
                     results.append((j, state, episize))
                 else:
                     logger.debug('Skipping state {} due to population limit'.format(state))
