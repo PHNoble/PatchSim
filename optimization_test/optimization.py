@@ -193,7 +193,7 @@ def greedy(cfg,B,L,temporal_granularity,look_ahead,f_vax_schedule):
         State_Array = state_arrs[opt_j]
         logger.debug('Vax supply for day {} emptied. Continuing...'.format(day))
     logger.debug('All vaccines allocated!')
-    sim.write_epicurves(cfg,patch,State_Array):
+    sim.write_epicurves(cfg,patch,State_Array)
 
     for t in vaxs.keys():
         for i in range(len(patch_ids.values)):
